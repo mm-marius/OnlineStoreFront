@@ -4,13 +4,138 @@ export default {
   
   data() {
     return {
-      count: 0
+      count: 0,
+      products: [],
+      loading: false,
+      error: null
     }
+  },
+  
+  mounted() {
+    // Example: Fetch products on mount
+    // Uncomment to test with your real API
+    // this.fetchProducts()
   },
   
   methods: {
     increment() {
       this.count++
+    },
+    
+    // Example: Fetch products from API using $fire
+    async fetchProducts() {
+      this.loading = true
+      this.error = null
+      
+      try {
+        // Using the global $fire with webservice
+        const result = await this.$fire('ws-products-search', {
+          params: {
+            page: 1,
+            limit: 20
+          }
+        })
+        
+        if (result.success) {
+          this.products = result.data
+          console.log('Products fetched:', result.data)
+        } else {
+          this.error = result.error
+        }
+      } catch (error) {
+        this.error = 'Failed to fetch products'
+        console.error('Error fetching products:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+    
+    // Example: Create a new product using $fire
+    async createProduct() {
+      this.loading = true
+      this.error = null
+      
+      try {
+        const result = await this.$fire('ws-products-create', {
+          data: {
+            name: 'Sample Product',
+            price: 99.99,
+            description: 'This is a sample product'
+          }
+        })
+        
+        if (result.success) {
+          console.log('Product created:', result.data)
+          // Add to products list
+          this.products.push(result.data)
+        } else {
+          this.error = result.error
+        }
+      } catch (error) {
+        this.error = 'Failed to create product'
+        console.error('Error creating product:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+    
+    // Example: Update a product using $fire
+    async updateProduct(productId) {
+      this.loading = true
+      this.error = null
+      
+      try {
+        const result = await this.$fire('ws-products-update', {
+          id: productId,
+          data: {
+            name: 'Updated Product Name',
+            price: 149.99
+          }
+        })
+        
+        if (result.success) {
+          console.log('Product updated:', result.data)
+          
+          // Update in local list
+          const index = this.products.findIndex(p => p.id === productId)
+          if (index !== -1) {
+            this.products[index] = result.data
+          }
+        } else {
+          this.error = result.error
+        }
+      } catch (error) {
+        this.error = 'Failed to update product'
+        console.error('Error updating product:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+    
+    // Example: Delete a product using $fire
+    async deleteProduct(productId) {
+      this.loading = true
+      this.error = null
+      
+      try {
+        const result = await this.$fire('ws-products-delete', {
+          id: productId
+        })
+        
+        if (result.success) {
+          console.log('Product deleted')
+          
+          // Remove from local list
+          this.products = this.products.filter(p => p.id !== productId)
+        } else {
+          this.error = result.error
+        }
+      } catch (error) {
+        this.error = 'Failed to delete product'
+        console.error('Error deleting product:', error)
+      } finally {
+        this.loading = false
+      }
     }
   }
 }
@@ -68,8 +193,74 @@ export default {
         </div>
       </div>
 
-      <!-- Button Examples -->
+      <!-- API Examples -->
       <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto mt-12">
+        <h3 class="text-2xl font-bold text-gray-900 mb-6">API Methods with useApi</h3>
+        
+        <!-- Error Message -->
+        <div v-if="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          {{ error }}
+        </div>
+        
+        <!-- Loading State -->
+        <div v-if="loading" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700">
+          Loading...
+        </div>
+        
+        <!-- API Buttons -->
+        <div class="flex flex-wrap gap-4 justify-center mb-6">
+          <button 
+            class="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+            :disabled="loading"
+            @click="fetchProducts"
+          >
+            GET Products
+          </button>
+          <button 
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+            :disabled="loading"
+            @click="createProduct"
+          >
+            POST Create Product
+          </button>
+          <button 
+            class="px-4 py-2 bg-yellow-600 text-white rounded-lg font-semibold hover:bg-yellow-700 transition-colors disabled:opacity-50"
+            :disabled="loading || products.length === 0"
+            @click="updateProduct(products[0]?.id)"
+          >
+            PUT Update Product
+          </button>
+          <button 
+            class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+            :disabled="loading || products.length === 0"
+            @click="deleteProduct(products[0]?.id)"
+          >
+            DELETE Product
+          </button>
+        </div>
+        
+        <!-- Products List -->
+        <div v-if="products.length > 0" class="mt-6">
+          <h4 class="font-semibold text-gray-900 mb-3">Products ({{ products.length }}):</h4>
+          <div class="space-y-2">
+            <div 
+              v-for="product in products" 
+              :key="product.id"
+              class="p-3 bg-gray-50 rounded-lg"
+            >
+              <p class="font-semibold">{{ product.name }}</p>
+              <p class="text-sm text-gray-600">Price: ${{ product.price }}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div v-else-if="!loading" class="mt-6 text-center text-gray-500">
+          No products yet. Click "GET Products" to fetch from API.
+        </div>
+      </div>
+      
+      <!-- Button Styles -->
+      <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto mt-8">
         <h3 class="text-2xl font-bold text-gray-900 mb-6">Button Styles</h3>
         <div class="flex flex-wrap gap-4 justify-center">
           <button class="px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors">Primary Button</button>
